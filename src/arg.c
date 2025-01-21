@@ -12,8 +12,7 @@ static const char* usage() {
            "                 and report summary\n"\
            "\n"\
            "Miscellaneous:\n"\
-           "  -h, --help     print help message\n"\
-           "\n";
+           "  -h, --help     print help message\n\n";
 }
 
 void getargs(const int ac, char** const av) {
