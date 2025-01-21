@@ -2,9 +2,11 @@
 
 > Ce projet consiste à recoder une partie de la commande strace.
 >
-> Strace is a debugging tool under Linux to monitor system calls use by a program,
-> and all the signals it receives, similar to the tool truss on other Unix systems.
-> It was made possible through a feature of the Linux kernel called ptrace.
+> Strace est un outil de débogage sous Linux
+> permettant de surveiller les appels système utilisés par un programme
+> ainsi que tous les signaux qu'il reçoit,
+> similaire à l'outil truss sur d'autres systèmes Unix.
+> Cet outil est rendu possible grâce à une fonctionnalité du noyau Linux appelée ptrace.
 
 ## Install
 
