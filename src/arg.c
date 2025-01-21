@@ -2,6 +2,19 @@
 
 extern t_strace data;
 
+static const char* usage() {
+
+    return "\nUsage: %s [-ch] PROG [ARGS]\n"\
+           "\n"\
+           "Statistics:\n"\
+           "  -c, --summary-only\n"\
+           "                 count time, calls, and errors for each syscall\n"\
+           "                 and report summary\n"\
+           "\n"\
+           "Miscellaneous:\n"\
+           "  -h, --help     print help message\n"\
+           "\n";
+}
 void getargs(const int ac, char** const av) {
 
     const t_option options[] = {
@@ -21,26 +34,28 @@ void getargs(const int ac, char** const av) {
             data.opt.summary_only = YES;
             break;
         case 'h':
-            printf(USAGE, av[0]);
+            printf(usage(), av[0]);
             exit(EXIT_SUCCESS);
         default:
             fprintf(stderr, "try '%s -h' for more information.\n", av[0]);
             exit(EXIT_FAILURE);
         }
     }
-    const int size = ac - optind + 1;
-    if(!size - 1) {
+    int size = ac - optind;
+    if(!size) {
 
         fprintf(stderr, "%s: must have PROG [ARGS]\n", av[0]);
         fprintf(stderr, "try '%s -h' for more information.\n", av[0]);
         exit(EXIT_FAILURE);
     }
-    data.target = malloc(PTR_SIZE * size);
+    size = (size + 1) * PTR_SIZE;
+
+    data.target = malloc(size);
     if(!data.target) {
 
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    memset(data.target, 0, PTR_SIZE * size);
+    memset(data.target, 0, size);
     for(int x = optind; x < ac; x++) data.target[x - optind] = av[x];
 }

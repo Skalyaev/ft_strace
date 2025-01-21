@@ -8,6 +8,7 @@
 #include <sys/user.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
+#include <linux/elf.h>  // Pour NT_PRSTATUS
 #include <asm/unistd.h>
 
 // Structure pour stocker les informations de l'appel système
@@ -16,6 +17,91 @@ struct syscall_info {
     unsigned long args[6];
     long return_value;
 };
+
+// Fonction pour convertir le numéro d'appel système en nom
+const char* syscall_name(long syscall_nr) {
+    switch (syscall_nr) {
+    case __NR_read:
+        return "read";
+    case __NR_write:
+        return "write";
+    case __NR_open:
+        return "open";
+    case __NR_close:
+        return "close";
+    case __NR_stat:
+        return "stat";
+    case __NR_fstat:
+        return "fstat";
+    case __NR_lstat:
+        return "lstat";
+    case __NR_poll:
+        return "poll";
+    case __NR_lseek:
+        return "lseek";
+    case __NR_mmap:
+        return "mmap";
+    case __NR_mprotect:
+        return "mprotect";
+    case __NR_munmap:
+        return "munmap";
+    case __NR_brk:
+        return "brk";
+    case __NR_rt_sigaction:
+        return "rt_sigaction";
+    case __NR_rt_sigprocmask:
+        return "rt_sigprocmask";
+    case __NR_rt_sigreturn:
+        return "rt_sigreturn";
+    case __NR_ioctl:
+        return "ioctl";
+    case __NR_pread64:
+        return "pread64";
+    case __NR_pwrite64:
+        return "pwrite64";
+    case __NR_readv:
+        return "readv";
+    case __NR_writev:
+        return "writev";
+    case __NR_access:
+        return "access";
+    case __NR_pipe:
+        return "pipe";
+    case __NR_select:
+        return "select";
+    case __NR_sched_yield:
+        return "sched_yield";
+    case __NR_mremap:
+        return "mremap";
+    case __NR_msync:
+        return "msync";
+    case __NR_mincore:
+        return "mincore";
+    case __NR_madvise:
+        return "madvise";
+    case __NR_dup:
+        return "dup";
+    case __NR_dup2:
+        return "dup2";
+    case __NR_pause:
+        return "pause";
+    case __NR_nanosleep:
+        return "nanosleep";
+    case __NR_getitimer:
+        return "getitimer";
+    case __NR_alarm:
+        return "alarm";
+    case __NR_setitimer:
+        return "setitimer";
+    case __NR_getpid:
+        return "getpid";
+    case __NR_exit:
+        return "exit";
+    // Ajoutez d'autres appels système selon vos besoins
+    default:
+        return "unknown";
+    }
+}
 
 // Fonction pour obtenir les registres
 static int get_syscall_info(pid_t pid, struct syscall_info *info) {
@@ -51,7 +137,7 @@ static int get_syscall_info(pid_t pid, struct syscall_info *info) {
 static void trace_process(pid_t child_pid) {
     int status;
     struct syscall_info info;
-    siginfo_t sig_info;
+    //siginfo_t sig_info;
 
     // Configurer les options de trace
     if (ptrace(PTRACE_SETOPTIONS, child_pid, 0,
@@ -80,7 +166,8 @@ static void trace_process(pid_t child_pid) {
         // Obtenir les informations de l'appel système
         if (get_syscall_info(child_pid, &info) == 0) {
             // Afficher l'appel système et ses arguments
-            printf("%s(", syscall_name(info.syscall_number));
+            const char* name = syscall_name(info.syscall_number);
+            printf("%s(", name);
             for (int i = 0; i < 6; i++) {
                 if (i > 0) printf(", ");
                 printf("0x%lx", info.args[i]);
@@ -107,7 +194,7 @@ static void trace_process(pid_t child_pid) {
     }
 }
 
-int main(int argc, char *argv[]) {
+int main2(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s command [args...]\n", argv[0]);
         exit(1);
