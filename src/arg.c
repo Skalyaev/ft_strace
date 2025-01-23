@@ -14,7 +14,6 @@ static const char* usage() {
            "Miscellaneous:\n"\
            "  -h, --help     print help message\n\n";
 }
-
 void getargs(const int ac, char** const av) {
 
     const t_option options[] = {

@@ -23,7 +23,7 @@ $(NAME): $(OBJ_DIR) $(OBJ)
 	@echo $(NAME) created
 
 $(OBJ_DIR):
-	@mkdir -p $(OBJ_DIR)
+	@mkdir -p $(dir $(OBJ))
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.$(SRC_EXT) $(INCLUDE) | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@ $(IFLAGS)
