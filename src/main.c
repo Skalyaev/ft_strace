@@ -21,12 +21,11 @@ static void sigexit(const int sig) {
 int main(int ac, char** av) {
 
     setlocale(LC_ALL, "");
+    getargs(ac, av);
+
     signal(SIGINT, sigexit);
     signal(SIGTERM, sigexit);
     signal(SIGQUIT, sigexit);
-
-    getargs(ac, av);
-    if(init() != EXIT_SUCCESS) return bye();
 
     const pid_t pid = fork();
     if(pid == -1) {
