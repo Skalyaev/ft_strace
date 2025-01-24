@@ -22,7 +22,17 @@
 
 void getargs(const int ac, char** const av);
 void trace(const pid_t pid);
-byte syscall_info(const pid_t pid);
-char* syscall_to_str(const long id);
+
+byte syscall_reg(const pid_t pid);
+t_syscall syscall_info();
+const char* errno_to_str(const int code);
+
+#ifdef __x86_64__
+t_syscall syscall64_info();
+#elif defined(__i386__)
+t_syscall syscall32_info();
+#else
+#error "Architecture not supported"
+#endif
 
 #endif

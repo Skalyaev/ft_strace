@@ -35,23 +35,21 @@ int main(int ac, char** av) {
         return bye();
     }
     if(!pid) {
-        if(ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
-
-            data.code = errno;
-            perror("ptrace(TRACEME)");
-            return bye();
-        }
+        raise(SIGSTOP);
         execvp(data.target[0], data.target);
-        perror("execve");
+        perror("execvp");
     } else {
         int status;
-        waitpid(pid, &status, 0);
-
-        if (ptrace(PTRACE_SETOPTIONS, pid, 0,
-                   PTRACE_O_TRACESYSGOOD) == -1) {
+        if(waitpid(pid, &status, WSTOPPED) == -1) {
 
             data.code = errno;
-            perror("ptrace(SETOPTIONS)");
+            perror("waitpid");
+            return bye();
+        }
+        if(ptrace(PTRACE_SEIZE, pid, 0, PTRACE_O_TRACESYSGOOD) == -1) {
+
+            data.code = errno;
+            perror("ptrace(SEIZE)");
             return bye();
         }
         trace(pid);
