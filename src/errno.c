@@ -1,6 +1,6 @@
 #include "../include/header.h"
 
-const char* errno_to_str(const int code) {
+char* errno_to_str(const int code) {
 
     switch(code) {
     case 1:

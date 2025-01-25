@@ -60,97 +60,163 @@ static void print_value(const ubyte type, const ulong value) {
     }
 }
 
-const char* sig_name(int sig) {
-    switch(sig) {
-    case SIGWINCH:
-        return "SIGWINCH";
-    case SIGINT:
-        return "SIGINT";
-    case SIGTERM:
-        return "SIGTERM";
-    // Add other signals as needed
-    default:
-        return "UNKNOWN";
-    }
-}
-
 static byte wait_for_syscall(const pid_t pid, const bool ret) {
+
     int status;
     if(ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
+
         data.code = errno;
         perror("ptrace(SYSCALL)");
         return EXIT_FAILURE;
     }
     if(waitpid(pid, &status, 0) == -1) {
+
         data.code = errno;
         perror("waitpid");
         return EXIT_FAILURE;
     }
-
-    // Handle normal exit
     if(WIFEXITED(status)) {
-        if(ret) printf(" = ?\n");
-        printf("+++ exited with %d +++\n", WEXITSTATUS(status));
+
+        status = WEXITSTATUS(status);
+        data.code = status;
+        if(!data.opt.summary_only) {
+
+            if(ret) printf(" = ?\n");
+            printf("+++ exited with %d +++\n", status);
+        }
         return EXIT_FAILURE;
     }
-
-    // Handle termination by signal
     if(WIFSIGNALED(status)) {
-        if(ret) printf(" = ?\n");
-        printf("+++ killed by %s +++\n", strsignal(WTERMSIG(status)));
+
+        status = WTERMSIG(status);
+        data.code = status;
+        data.sigexit = YES;
+        if(!data.opt.summary_only) {
+
+            if(ret) printf(" = ?\n");
+            printf("+++ killed by %s +++\n", si_signo_to_str(status));
+        }
         return EXIT_FAILURE;
     }
+    if(!WIFSTOPPED(status)) return EXIT_FAILURE;
 
-    // Handle stopped by signal
-    if(WIFSTOPPED(status)) {
-        int sig = WSTOPSIG(status);
+    int sig = WSTOPSIG(status);
+    if(sig == (SIGTRAP | 0x80)) return EXIT_SUCCESS;
 
-        // Check if it's a syscall stop
-        if(sig == (SIGTRAP | 0x80)) {
-            return EXIT_SUCCESS;
-        }
+    siginfo_t info;
+    if(ptrace(PTRACE_GETSIGINFO, pid, 0, &info) == -1) {
 
-        // If it's a real signal, print it in strace format
-        if(sig != SIGTRAP) {
-            if(ret) printf(" = ? ERESTARTSYS (To be restarted if SA_RESTART is set)\n");
-            printf("--- %s {si_signo=%s, si_code=SI_KERNEL} ---\n",
-                   strsignal(sig), sig_name(sig));
-            return EXIT_SUCCESS;
-        }
+        data.code = errno;
+        perror("ptrace(GETSIGINFO)");
+        return EXIT_FAILURE;
     }
+    print_siginfo(&info);
+    if(ptrace(PTRACE_SYSCALL, pid, 0, sig) == -1) {
 
+        data.code = errno;
+        perror("ptrace(SYSCALL)");
+        return EXIT_FAILURE;
+    }
+    if(waitpid(pid, &status, 0) == -1) {
+
+        data.code = errno;
+        perror("waitpid");
+        return EXIT_FAILURE;
+    }
+    if(WIFEXITED(status)) {
+
+        status = WEXITSTATUS(status);
+        data.code = status;
+        if(!data.opt.summary_only)
+            printf("+++ exited with %d +++\n", status);
+        return EXIT_FAILURE;
+    }
+    if(WIFSIGNALED(status)) {
+
+        status = WTERMSIG(status);
+        data.code = status;
+        data.sigexit = YES;
+        if(!data.opt.summary_only)
+            printf("+++ killed by %s +++\n", si_signo_to_str(status));
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
+}
+
+static byte end_time(const t_syscall* const syscall,
+                     const t_timespec* const start,
+                     const long code) {
+
+    t_timespec end;
+    if(clock_gettime(CLOCK_MONOTONIC, &end) == -1) {
+
+        data.code = errno;
+        perror("clock_gettime");
+        return EXIT_FAILURE;
+    }
+    const double seconds = (end->tv_sec - start->tv_sec)
+                           + (end->tv_nsec - start->tv_nsec) / 1e9;
+
+    return add_to_summary(syscall->id, syscall->name, code < 0, seconds);
 }
 
 void trace(const pid_t pid) {
 
+    bool started = NO;
+    t_timespec start;
+
     t_syscall syscall;
-    int code;
+    long code;
     do {
         if(wait_for_syscall(pid, NO) != EXIT_SUCCESS) break;
-        if(syscall_reg(pid) != EXIT_SUCCESS) break;
+        if(data.opt.summary_only && !started) {
 
-        syscall = syscall_info();
-        printf("%s(", syscall.name);
+            memset(&start, 0, TIMESPEC_SIZE);
+            memset(&end, 0, TIMESPEC_SIZE);
 
-        for(ubyte x = 0; x < syscall.nargs; x++) {
+            if(clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
 
-            if(x > 0) printf(", ");
-            print_value(syscall.arg_types[x], data.syscall.args[x]);
+                data.code = errno;
+                perror("clock_gettime");
+                break;
+            }
+            started = YES;
         }
-        printf(")");
-        fflush(stdout);
+        if(syscall_reg(pid) != EXIT_SUCCESS) break;
+        syscall = syscall_info();
+        if(!data.opt.summary_only) {
 
+            printf("%s(", syscall.name);
+            for(ubyte x = 0; x < syscall.nargs; x++) {
+
+                if(x > 0) printf(", ");
+                print_value(syscall.arg_types[x], data.syscall.args[x]);
+            }
+            printf(")");
+            fflush(stdout);
+        }
         if(wait_for_syscall(pid, YES) != EXIT_SUCCESS) break;
         if(syscall_reg(pid) != EXIT_SUCCESS) break;
 
-        printf(" = ");
-        if((long)data.syscall.ret < 0) {
+        code = data.syscall.ret;
+        if(!data.opt.summary_only) {
 
-            code = -data.syscall.ret;
-            printf("-1 %s (%s)", errno_to_str(code), strerror(code));
-        } else print_value(syscall.ret_type, data.syscall.ret);
+            printf(" = ");
+            if(code < 0) {
 
-        printf("\n");
+                code *= -1;
+                if(code == 512)
+                    printf("? ERESTARTSYS (To be restarted if SA_RESTART is set)");
+                else printf("-1 %s (%s)", errno_to_str(code), strerror(code));
+
+            } else print_value(syscall.ret_type, data.syscall.ret);
+            printf("\n");
+        }
+        else if(code != -512 && started) {
+
+            started = NO;
+            if(end_time(&syscall, &start, code) != EXIT_SUCCESS) break;
+        }
     } while(YES);
+    if(data.opt.summary_only && started) end_time(&syscall, &start, code);
 }
