@@ -21,7 +21,7 @@ typedef struct summary {
     size_t calls;
     size_t errors;
     float percent;
-    double seconds;
+    float seconds;
     size_t avg;
     struct summary* next;
     struct summary* prev;

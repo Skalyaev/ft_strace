@@ -60,15 +60,22 @@ static void print_value(const ubyte type, const ulong value) {
     }
 }
 
-static byte wait_for_syscall(const pid_t pid, const bool ret) {
+static byte wait_for_syscall(const pid_t pid, t_timespec* const end) {
 
-    int status;
     if(ptrace(PTRACE_SYSCALL, pid, 0, 0) == -1) {
 
         data.code = errno;
         perror("ptrace(SYSCALL)");
         return EXIT_FAILURE;
     }
+    if(end && data.opt.summary_only
+            && clock_gettime(CLOCK_MONOTONIC, end) == -1) {
+
+        data.code = errno;
+        perror("clock_gettime");
+        return EXIT_FAILURE;
+    }
+    int status;
     if(waitpid(pid, &status, 0) == -1) {
 
         data.code = errno;
@@ -81,7 +88,7 @@ static byte wait_for_syscall(const pid_t pid, const bool ret) {
         data.code = status;
         if(!data.opt.summary_only) {
 
-            if(ret) printf(" = ?\n");
+            if(end) printf(" = ?\n");
             printf("+++ exited with %d +++\n", status);
         }
         return EXIT_FAILURE;
@@ -93,7 +100,7 @@ static byte wait_for_syscall(const pid_t pid, const bool ret) {
         data.sigexit = YES;
         if(!data.opt.summary_only) {
 
-            if(ret) printf(" = ?\n");
+            if(end) printf(" = ?\n");
             printf("+++ killed by %s +++\n", si_signo_to_str(status));
         }
         return EXIT_FAILURE;
@@ -110,7 +117,7 @@ static byte wait_for_syscall(const pid_t pid, const bool ret) {
         perror("ptrace(GETSIGINFO)");
         return EXIT_FAILURE;
     }
-    print_siginfo(&info);
+    if(!data.opt.summary_only) print_siginfo(&info);
     if(ptrace(PTRACE_SYSCALL, pid, 0, sig) == -1) {
 
         data.code = errno;
@@ -127,6 +134,7 @@ static byte wait_for_syscall(const pid_t pid, const bool ret) {
 
         status = WEXITSTATUS(status);
         data.code = status;
+
         if(!data.opt.summary_only)
             printf("+++ exited with %d +++\n", status);
         return EXIT_FAILURE;
@@ -136,6 +144,7 @@ static byte wait_for_syscall(const pid_t pid, const bool ret) {
         status = WTERMSIG(status);
         data.code = status;
         data.sigexit = YES;
+
         if(!data.opt.summary_only)
             printf("+++ killed by %s +++\n", si_signo_to_str(status));
         return EXIT_FAILURE;
@@ -143,46 +152,36 @@ static byte wait_for_syscall(const pid_t pid, const bool ret) {
     return EXIT_SUCCESS;
 }
 
-static byte end_time(const t_syscall* const syscall,
-                     const t_timespec* const start,
-                     const long code) {
+static byte end_timer(const t_syscall* const syscall,
+                      const t_timespec* const start,
+                      t_timespec* const end,
+                      const long code) {
 
-    t_timespec end;
-    if(clock_gettime(CLOCK_MONOTONIC, &end) == -1) {
+    if(!end->tv_sec && !end->tv_nsec &&
+            clock_gettime(CLOCK_MONOTONIC, end) == -1) {
 
         data.code = errno;
         perror("clock_gettime");
         return EXIT_FAILURE;
     }
-    const double seconds = (end->tv_sec - start->tv_sec)
-                           + (end->tv_nsec - start->tv_nsec) / 1e9;
+    const float seconds = (end->tv_sec - start->tv_sec)
+                          + (end->tv_nsec - start->tv_nsec) / 1e9;
 
-    return add_to_summary(syscall->id, syscall->name, code < 0, seconds);
+    return add_to_summary(data.syscall.id, syscall->name, code < 0, seconds);
 }
 
 void trace(const pid_t pid) {
 
     bool started = NO;
-    t_timespec start;
+    t_timespec start = {0};
+    t_timespec end = {0};
 
-    t_syscall syscall;
-    long code;
+    t_syscall syscall = {0};
+    long code = 0;
     do {
-        if(wait_for_syscall(pid, NO) != EXIT_SUCCESS) break;
-        if(data.opt.summary_only && !started) {
-
-            memset(&start, 0, TIMESPEC_SIZE);
-            memset(&end, 0, TIMESPEC_SIZE);
-
-            if(clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
-
-                data.code = errno;
-                perror("clock_gettime");
-                break;
-            }
-            started = YES;
-        }
+        if(wait_for_syscall(pid, NULL) != EXIT_SUCCESS) break;
         if(syscall_reg(pid) != EXIT_SUCCESS) break;
+
         syscall = syscall_info();
         if(!data.opt.summary_only) {
 
@@ -195,7 +194,18 @@ void trace(const pid_t pid) {
             printf(")");
             fflush(stdout);
         }
-        if(wait_for_syscall(pid, YES) != EXIT_SUCCESS) break;
+        else if(!started) {
+
+            memset(&end, 0, TIMESPEC_SIZE);
+            if(clock_gettime(CLOCK_MONOTONIC, &start) == -1) {
+
+                data.code = errno;
+                perror("clock_gettime");
+                break;
+            }
+            started = YES;
+        }
+        if(wait_for_syscall(pid, &end) != EXIT_SUCCESS) break;
         if(syscall_reg(pid) != EXIT_SUCCESS) break;
 
         code = data.syscall.ret;
@@ -212,11 +222,12 @@ void trace(const pid_t pid) {
             } else print_value(syscall.ret_type, data.syscall.ret);
             printf("\n");
         }
-        else if(code != -512 && started) {
+        else if(started) {
 
             started = NO;
-            if(end_time(&syscall, &start, code) != EXIT_SUCCESS) break;
+            if(end_timer(&syscall, &start, &end, code) != EXIT_SUCCESS) break;
         }
     } while(YES);
-    if(data.opt.summary_only && started) end_time(&syscall, &start, code);
+    if(!strncmp(syscall.name, "exit", 4)) return;
+    if(data.opt.summary_only && started) end_timer(&syscall, &start, &end, code);
 }

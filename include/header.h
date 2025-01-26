@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <getopt.h>
 #include <time.h>
+#include <math.h>
 #include <errno.h>
 
 #include <sys/ptrace.h>
@@ -42,7 +43,7 @@ char* si_signo_to_str(const int code);
 void print_siginfo(const siginfo_t* info);
 
 byte add_to_summary(const long id, const char* const name,
-                    const bool failed, const double seconds);
+                    const bool failed, const float seconds);
 void free_summary();
 void print_summary();
 
