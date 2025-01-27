@@ -720,10 +720,6 @@ t_syscall syscall32_info() {
         //           unsigned long arg4, unsigned long arg5);
         return SYSCALL_INFO("prctl", 5, INT, INT, ULONG, ULONG, ULONG, ULONG);
 
-    case __NR_rt_sigreturn:
-        // int rt_sigreturn(void);
-        return SYSCALL_INFO("rt_sigreturn", 0, INT);
-
     case __NR_rt_sigaction:
         // int rt_sigaction(int sig, const struct sigaction *act,
         //                  struct sigaction *oact);
