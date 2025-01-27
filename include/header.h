@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <locale.h>
 #include <signal.h>
-#include <getopt.h>
 #include <time.h>
 #include <math.h>
 #include <errno.h>

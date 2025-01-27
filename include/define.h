@@ -41,14 +41,12 @@ typedef unsigned short ushort;
 typedef unsigned int uint;
 typedef unsigned long ulong;
 
-typedef struct option t_option;
 typedef struct iovec t_iovec;
 typedef struct user_regs_struct t_user_regs;
 typedef struct timespec t_timespec;
 
 #define INT_SIZE sizeof(int)
 #define PTR_SIZE sizeof(void*)
-#define OPTION_SIZE sizeof(t_option)
 #define IOVEC_SIZE sizeof(t_iovec)
 #define USER_REGS_SIZE sizeof(t_user_regs)
 #define TIMESPEC_SIZE sizeof(t_timespec)

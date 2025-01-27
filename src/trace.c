@@ -209,7 +209,7 @@ void trace(const pid_t pid) {
             if(code < 0) {
 
                 code *= -1;
-                if(code == 512)
+                if(code == 512 || code == 516)
                     printf("? ERESTARTSYS (To be restarted if SA_RESTART is set)");
                 else printf("-1 %s (%s)", errno_to_str(code), strerror(code));
 

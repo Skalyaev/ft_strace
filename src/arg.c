@@ -16,45 +16,38 @@ static const char* usage() {
 }
 void getargs(const int ac, char** const av) {
 
-    const t_option options[] = {
+    int x;
+    for(x = 1; x < ac; x++) {
 
-        {"summary-only", no_argument, 0, 'c'},
-        {"help", no_argument, 0, 'h'},
-        {0, 0, 0, 0}
-    };
-    const char* const optstring = "ch";
+        if(av[x][0] != '-') break;
 
-    int idx = 0;
-    int opt;
-    while((opt = getopt_long(ac, av, optstring, options, &idx)) != -1) {
+        if(strcmp(av[x], "-c") == 0 || strcmp(av[x], "--summary-only") == 0){
 
-        switch(opt) {
-        case 'c':
             data.opt.summary_only = YES;
-            break;
-        case 'h':
+            continue;
+        }
+        else if(strcmp(av[x], "-h") == 0 || strcmp(av[x], "--help") == 0) {
+
             printf(usage(), av[0]);
             exit(EXIT_SUCCESS);
-        default:
-            fprintf(stderr, "try '%s -h' for more information.\n", av[0]);
-            exit(EXIT_FAILURE);
         }
+        fprintf(stderr, "%s: invalid option -- '%s'\n", av[0], av[x]);
+        fprintf(stderr, "try '%s -h' for more information.\n", av[0]);
+        exit(EXIT_FAILURE);
     }
-    int size = ac - optind;
+    const int size = ac - x;
     if(!size) {
 
         fprintf(stderr, "%s: must have PROG [ARGS]\n", av[0]);
         fprintf(stderr, "try '%s -h' for more information.\n", av[0]);
         exit(EXIT_FAILURE);
     }
-    size = (size + 1) * PTR_SIZE;
-
-    data.target = malloc(size);
+    data.target = malloc(size * PTR_SIZE);
     if(!data.target) {
 
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    memset(data.target, 0, size);
-    for(int x = optind; x < ac; x++) data.target[x - optind] = av[x];
+    memset(data.target, 0, size * PTR_SIZE);
+    for(int y = 0; y < size; y++) data.target[y] = av[x + y];
 }

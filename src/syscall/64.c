@@ -66,6 +66,10 @@ t_syscall syscall64_info() {
         //                  struct sigaction* oldact, size_t sigsetsize);
         return SYSCALL_INFO("rt_sigaction", 4, INT, INT, ADDR, ADDR, ULONG);
 
+    case __NR_rt_sigreturn:
+        // int rt_sigreturn(...);
+        return SYSCALL_INFO("rt_sigreturn", 1, INT, ULONG);
+
     case __NR_rt_sigprocmask:
         // int rt_sigprocmask(int how, const sigset_t* set, sigset_t* oldset,
         //                    size_t sigsetsize);
