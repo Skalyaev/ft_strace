@@ -494,6 +494,10 @@ t_syscall syscall32_info() {
         // int fsync(int fd);
         return SYSCALL_INFO("fsync", 1, INT, INT);
 
+    case __NR_sigreturn:
+        // int sigreturn(unsigned long __unused);
+        return SYSCALL_INFO("sigreturn", 1, INT, ULONG);
+
     case __NR_rt_sigreturn:
         // int rt_sigreturn(...);
         return SYSCALL_INFO("rt_sigreturn", 1, INT, ULONG);

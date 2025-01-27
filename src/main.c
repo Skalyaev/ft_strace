@@ -20,52 +20,6 @@ static void sigexit(const int sig) {
     exit(bye());
 }
 
-static char* resolve(char* const target, const char* const self) {
-
-    if(target[0] == '/') return target;
-    if(target[1] == '.' && access(target, X_OK) == 0) return target;
-
-    char* const path = getenv("PATH");
-    if(!path) {
-
-        data.code = ENOENT;
-        fprintf(stderr, "%s: Can't stat '%s': %s\n", self, target, strerror(data.code));
-        exit(bye());
-    }
-    char* const paths = strdup(path);
-    if(!paths) {
-
-        data.code = errno;
-        perror("strdup");
-        exit(bye());
-    }
-    char* ptr = NULL;
-    char* token = strtok_r(paths, ":", &ptr);
-    while(token) {
-
-        char* const fullpath = malloc(strlen(token) + strlen(target) + 2);
-        if(!fullpath) {
-
-            data.code = errno;
-            perror("malloc");
-            free(paths);
-            exit(bye());
-        }
-        sprintf(fullpath, "%s/%s", token, target);
-        if(access(fullpath, X_OK) == 0) {
-
-            free(paths);
-            return fullpath;
-        }
-        free(fullpath);
-        token = strtok_r(NULL, ":", &ptr);
-    }
-    free(paths);
-    data.code = ENOENT;
-    fprintf(stderr, "%s: Can't stat '%s': %s\n", self, target, strerror(data.code));
-    exit(bye());
-}
-
 byte dowait(const pid_t pid, int* const status, const int opts) {
 
     static sigset_t set = {0};
@@ -108,7 +62,7 @@ byte dowait(const pid_t pid, int* const status, const int opts) {
     return EXIT_SUCCESS;
 }
 
-int main(int ac, char** av, char** env) {
+int main(int ac, char** av) {
 
     setlocale(LC_ALL, "");
     getargs(ac, av);
@@ -121,16 +75,12 @@ int main(int ac, char** av, char** env) {
         return bye();
     }
     if(!pid) {
-        data.target[0] = resolve(data.target[0], av[0]);
         raise(SIGSTOP);
 
-        // We do not use execvp() because a bonus point
-        // for this project is to manage PATH ourselves.
-        execve(data.target[0], data.target, env);
-        perror("execve");
+        execvp(data.target[0], data.target);
+        perror("execvp");
         data.code = errno;
 
-        free(data.target[0]);
         free(data.target);
         exit(data.code);
     }

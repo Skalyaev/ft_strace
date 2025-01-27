@@ -20,7 +20,10 @@ void getargs(const int ac, char** const av) {
     for(x = 1; x < ac; x++) {
 
         if(av[x][0] != '-') break;
-
+        if(strcmp(av[x], "--") == 0) {
+            x++;
+            break;
+        }
         if(strcmp(av[x], "-c") == 0 || strcmp(av[x], "--summary-only") == 0){
 
             data.opt.summary_only = YES;
@@ -42,12 +45,12 @@ void getargs(const int ac, char** const av) {
         fprintf(stderr, "try '%s -h' for more information.\n", av[0]);
         exit(EXIT_FAILURE);
     }
-    data.target = malloc(size * PTR_SIZE);
+    data.target = malloc((size + 1) * PTR_SIZE);
     if(!data.target) {
 
         perror("malloc");
         exit(EXIT_FAILURE);
     }
-    memset(data.target, 0, size * PTR_SIZE);
+    memset(data.target, 0, (size + 1) * PTR_SIZE);
     for(int y = 0; y < size; y++) data.target[y] = av[x + y];
 }
