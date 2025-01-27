@@ -112,6 +112,7 @@ void print_summary() {
     printf("------ ----------- ----------- --------- --------- ----------------\n");
     for(t_summary* ptr = data.summary; ptr; ptr = ptr->next) {
 
+#ifdef __x86_64__
         printf("%6.2f", ptr->percent);
         printf(" %11.6f", ptr->seconds);
         printf(" %11lu", ptr->avg);
@@ -119,6 +120,18 @@ void print_summary() {
 
         if(ptr->errors) printf(" %9lu", ptr->errors);
         else printf("          ");
+
+#elif defined(__i386__)
+        printf("%6.2f", ptr->percent);
+        printf(" %11.6f", ptr->seconds);
+        printf(" %11u", ptr->avg);
+        printf(" %9u", ptr->calls);
+
+        if(ptr->errors) printf(" %9u", ptr->errors);
+        else printf("          ");
+#else
+#error "Architecture not supported"
+#endif
         printf(" %s\n", ptr->name);
 
         calls += ptr->calls;
@@ -128,8 +141,15 @@ void print_summary() {
         count++;
     }
     printf("------ ----------- ----------- --------- --------- ----------------\n");
+#ifdef __x86_64__
     printf("100,00 %11.6f %11lu %9lu %9lu total\n",
            seconds, avg / count, calls, errors);
 
+#elif defined(__i386__)
+    printf("100,00 %11.6f %11u %9u %9u total\n",
+           seconds, avg / count, calls, errors);
+#else
+#error "Architecture not supported"
+#endif
     return free_summary();
 }

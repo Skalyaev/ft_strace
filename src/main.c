@@ -23,6 +23,7 @@ static void sigexit(const int sig) {
 static char* resolve(char* const target, const char* const self) {
 
     if(target[0] == '/') return target;
+    if(target[1] == '.' && access(target, X_OK) == 0) return target;
 
     char* const path = getenv("PATH");
     if(!path) {
@@ -65,6 +66,48 @@ static char* resolve(char* const target, const char* const self) {
     exit(bye());
 }
 
+byte dowait(const pid_t pid, int* const status, const int opts) {
+
+    static sigset_t set = {0};
+    if(sigemptyset(&set) == -1) {
+
+        data.code = errno;
+        perror("sigemptyset");
+        return EXIT_FAILURE;
+    }
+    if(sigprocmask(SIG_SETMASK, &set, NULL) == -1) {
+
+        data.code = errno;
+        perror("sigprocmask");
+        return EXIT_FAILURE;
+    }
+    if(waitpid(pid, status, opts) == -1) {
+
+        data.code = errno;
+        perror("waitpid");
+        return EXIT_FAILURE;
+    }
+    static const int toblock[] = {
+
+        SIGHUP, SIGINT, SIGQUIT, SIGPIPE, SIGTERM
+    };
+    for(ubyte x = 0; x < sizeof(toblock) / INT_SIZE; x++) {
+
+        if(sigaddset(&set, toblock[x]) == 0) continue;
+
+        data.code = errno;
+        perror("sigaddset");
+        return EXIT_FAILURE;
+    }
+    if(sigprocmask(SIG_BLOCK, &set, NULL) == -1) {
+
+        data.code = errno;
+        perror("sigprocmask");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
 int main(int ac, char** av, char** env) {
 
     setlocale(LC_ALL, "");
@@ -96,12 +139,8 @@ int main(int ac, char** av, char** env) {
     signal(SIGQUIT, sigexit);
 
     int status;
-    if(waitpid(pid, &status, WSTOPPED) == -1) {
+    if(dowait(pid, &status, WSTOPPED) == EXIT_FAILURE) return bye();
 
-        data.code = errno;
-        perror("waitpid");
-        return bye();
-    }
     if(WIFEXITED(status)) return bye();
     if(!WIFSTOPPED(status) || WSTOPSIG(status) != SIGSTOP) return bye();
 

@@ -76,12 +76,9 @@ static byte wait_for_syscall(const pid_t pid, t_timespec* const end) {
         return EXIT_FAILURE;
     }
     int status;
-    if(waitpid(pid, &status, 0) == -1) {
-
-        data.code = errno;
-        perror("waitpid");
+    if(dowait(pid, &status, 0) == EXIT_FAILURE)
         return EXIT_FAILURE;
-    }
+
     if(WIFEXITED(status)) {
 
         status = WEXITSTATUS(status);
@@ -124,12 +121,9 @@ static byte wait_for_syscall(const pid_t pid, t_timespec* const end) {
         perror("ptrace(SYSCALL)");
         return EXIT_FAILURE;
     }
-    if(waitpid(pid, &status, 0) == -1) {
-
-        data.code = errno;
-        perror("waitpid");
+    if(dowait(pid, &status, 0) == EXIT_FAILURE)
         return EXIT_FAILURE;
-    }
+
     if(WIFEXITED(status)) {
 
         status = WEXITSTATUS(status);
@@ -228,6 +222,7 @@ void trace(const pid_t pid) {
             if(end_timer(&syscall, &start, &end, code) != EXIT_SUCCESS) break;
         }
     } while(YES);
+
     if(!strncmp(syscall.name, "exit", 4)) return;
     if(data.opt.summary_only && started) end_timer(&syscall, &start, &end, code);
 }

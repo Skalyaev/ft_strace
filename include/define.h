@@ -46,6 +46,7 @@ typedef struct iovec t_iovec;
 typedef struct user_regs_struct t_user_regs;
 typedef struct timespec t_timespec;
 
+#define INT_SIZE sizeof(int)
 #define PTR_SIZE sizeof(void*)
 #define OPTION_SIZE sizeof(t_option)
 #define IOVEC_SIZE sizeof(t_iovec)

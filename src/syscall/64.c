@@ -1493,12 +1493,6 @@ t_syscall syscall64_info() {
         // int process_mrelease(int pidfd, unsigned int flags);
         return SYSCALL_INFO("process_mrelease", 2, INT, INT, UINT);
 
-    case __NR_futex_waitv:
-        // int futex_waitv(struct futex_waitv* waiters, unsigned int nr_waiters,
-        //                 unsigned int flags, struct timespec* timeout,
-        //                 clockid_t clockid);
-        return SYSCALL_INFO("futex_waitv", 5, INT, ADDR, UINT, UINT, ADDR, INT);
-
     default:
         break;
     }

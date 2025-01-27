@@ -24,6 +24,7 @@
 
 void getargs(const int ac, char** const av);
 void trace(const pid_t pid);
+byte dowait(const pid_t pid, int* const status, const int opts);
 
 byte syscall_reg(const pid_t pid);
 t_syscall syscall_info();
