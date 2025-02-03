@@ -17,7 +17,7 @@ apt install -y gcc
 ```
 
 ```bash
-git clone https://github.com/Skalyaeve/ft_strace.git
+git clone https://github.com/Skalyaev/ft_strace.git
 cd ft_strace && make
 
 ./ft_strace -h
